@@ -52,7 +52,7 @@ class GitHubClient:
         if manual_pr_number:
             pr_number = manual_pr_number
             logger.info(f"Using manual PR number override: #{pr_number}")
-        elif run.pull_requests and run.pull_requests.totalCount > 0:
+        elif run.pull_requests:
             pr_number = run.pull_requests[0].number
             logger.info(f"Detected PR #{pr_number} from workflow run metadata")
 
