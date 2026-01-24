@@ -14,87 +14,96 @@ class Config:
 
     # GitHub configuration (support both hyphen and underscore versions for local testing)
     github_token: str = field(
-        default_factory=lambda: os.getenv("INPUT_GITHUB-TOKEN", os.getenv("INPUT_GITHUB_TOKEN", ""))
+        default_factory=lambda: os.getenv("INPUT_GITHUB-TOKEN") or os.getenv("INPUT_GITHUB_TOKEN") or ""
     )
     repository: str = field(default_factory=lambda: os.getenv("GITHUB_REPOSITORY", ""))
     run_id: str = field(
-        default_factory=lambda: os.getenv("INPUT_RUN-ID", os.getenv("INPUT_RUN_ID", os.getenv("GITHUB_RUN_ID", "")))
+        default_factory=lambda: os.getenv("INPUT_RUN-ID")
+        or os.getenv("INPUT_RUN_ID")
+        or os.getenv("GITHUB_RUN_ID")
+        or ""
     )
-    pr_number: str | None = field(default_factory=lambda: os.getenv("INPUT_PR-NUMBER", os.getenv("INPUT_PR_NUMBER")))
+    pr_number: str | None = field(
+        default_factory=lambda: os.getenv("INPUT_PR-NUMBER") or os.getenv("INPUT_PR_NUMBER") or None
+    )
 
     # LLM configuration (support both hyphen and underscore versions for local testing)
     llm_provider: str = field(
-        default_factory=lambda: os.getenv("INPUT_LLM-PROVIDER", os.getenv("INPUT_LLM_PROVIDER", ""))
+        default_factory=lambda: os.getenv("INPUT_LLM-PROVIDER") or os.getenv("INPUT_LLM_PROVIDER") or ""
     )
-    llm_model: str = field(default_factory=lambda: os.getenv("INPUT_LLM-MODEL", os.getenv("INPUT_LLM_MODEL", "")))
-    llm_api_key: str = field(default_factory=lambda: os.getenv("INPUT_LLM-API-KEY", os.getenv("INPUT_LLM_API_KEY", "")))
+    llm_model: str = field(default_factory=lambda: os.getenv("INPUT_LLM-MODEL") or os.getenv("INPUT_LLM_MODEL") or "")
+    llm_api_key: str = field(
+        default_factory=lambda: os.getenv("INPUT_LLM-API-KEY") or os.getenv("INPUT_LLM_API_KEY") or ""
+    )
     llm_base_url: str | None = field(
-        default_factory=lambda: os.getenv("INPUT_LLM-BASE-URL", os.getenv("INPUT_LLM_BASE_URL"))
+        default_factory=lambda: os.getenv("INPUT_LLM-BASE-URL") or os.getenv("INPUT_LLM_BASE_URL") or None
     )
 
     # cordon configuration (support both hyphen and underscore versions for local testing)
     cordon_device: str = field(
-        default_factory=lambda: os.getenv("INPUT_CORDON-DEVICE", os.getenv("INPUT_CORDON_DEVICE", "cpu"))
+        default_factory=lambda: os.getenv("INPUT_CORDON-DEVICE") or os.getenv("INPUT_CORDON_DEVICE") or "cpu"
     )
     cordon_backend: str = field(
-        default_factory=lambda: os.getenv(
-            "INPUT_CORDON-BACKEND", os.getenv("INPUT_CORDON_BACKEND", "sentence-transformers")
-        )
+        default_factory=lambda: os.getenv("INPUT_CORDON-BACKEND")
+        or os.getenv("INPUT_CORDON_BACKEND")
+        or "sentence-transformers"
     )
     cordon_model_name: str = field(
-        default_factory=lambda: os.getenv(
-            "INPUT_CORDON-MODEL-NAME", os.getenv("INPUT_CORDON_MODEL_NAME", "all-MiniLM-L6-v2")
-        )
+        default_factory=lambda: os.getenv("INPUT_CORDON-MODEL-NAME")
+        or os.getenv("INPUT_CORDON_MODEL_NAME")
+        or "all-MiniLM-L6-v2"
     )
     cordon_api_key: str | None = field(
-        default_factory=lambda: os.getenv("INPUT_CORDON-API-KEY", os.getenv("INPUT_CORDON_API_KEY"))
+        default_factory=lambda: os.getenv("INPUT_CORDON-API-KEY") or os.getenv("INPUT_CORDON_API_KEY") or None
     )
     cordon_endpoint: str | None = field(
-        default_factory=lambda: os.getenv("INPUT_CORDON-ENDPOINT", os.getenv("INPUT_CORDON_ENDPOINT"))
+        default_factory=lambda: os.getenv("INPUT_CORDON-ENDPOINT") or os.getenv("INPUT_CORDON_ENDPOINT") or None
     )
     cordon_batch_size: int = field(
-        default_factory=lambda: int(os.getenv("INPUT_CORDON-BATCH-SIZE", os.getenv("INPUT_CORDON_BATCH_SIZE", "32")))
+        default_factory=lambda: int(
+            os.getenv("INPUT_CORDON-BATCH-SIZE") or os.getenv("INPUT_CORDON_BATCH_SIZE") or "32"
+        )
     )
 
     # GitHub Actions output configuration (support both hyphen and underscore versions for local testing)
     post_job_summary: bool = True
     post_pr_comment: bool = field(
         default_factory=lambda: (
-            os.getenv("INPUT_POST-PR-COMMENT", os.getenv("INPUT_POST_PR_COMMENT", "false")).lower() == "true"
+            (os.getenv("INPUT_POST-PR-COMMENT") or os.getenv("INPUT_POST_PR_COMMENT") or "false").lower() == "true"
         )
     )
 
     # PR context analysis configuration (support both hyphen and underscore versions for local testing)
     analyze_pr_context: bool = field(
         default_factory=lambda: (
-            os.getenv("INPUT_ANALYZE-PR-CONTEXT", os.getenv("INPUT_ANALYZE_PR_CONTEXT", "true")).lower() == "true"
+            (os.getenv("INPUT_ANALYZE-PR-CONTEXT") or os.getenv("INPUT_ANALYZE_PR_CONTEXT") or "true").lower() == "true"
         )
     )
     pr_context_token_budget_pct: int = field(
         default_factory=lambda: int(
-            os.getenv("INPUT_PR-CONTEXT-TOKEN-BUDGET", os.getenv("INPUT_PR_CONTEXT_TOKEN_BUDGET", "20"))
+            os.getenv("INPUT_PR-CONTEXT-TOKEN-BUDGET") or os.getenv("INPUT_PR_CONTEXT_TOKEN_BUDGET") or "20"
         )
     )
 
     # Filtering configuration (support both hyphen and underscore versions for local testing)
     ignored_jobs_patterns: list[str] = field(
         default_factory=lambda: (
-            os.getenv("INPUT_IGNORED-JOBS", os.getenv("INPUT_IGNORED_JOBS", "")).split(",")
-            if os.getenv("INPUT_IGNORED-JOBS") or os.getenv("INPUT_IGNORED_JOBS")
+            (os.getenv("INPUT_IGNORED-JOBS") or os.getenv("INPUT_IGNORED_JOBS") or "").split(",")
+            if (os.getenv("INPUT_IGNORED-JOBS") or os.getenv("INPUT_IGNORED_JOBS"))
             else []
         )
     )
     ignored_steps_patterns: list[str] = field(
         default_factory=lambda: (
-            os.getenv("INPUT_IGNORED-STEPS", os.getenv("INPUT_IGNORED_STEPS", "")).split(",")
-            if os.getenv("INPUT_IGNORED-STEPS") or os.getenv("INPUT_IGNORED_STEPS")
+            (os.getenv("INPUT_IGNORED-STEPS") or os.getenv("INPUT_IGNORED_STEPS") or "").split(",")
+            if (os.getenv("INPUT_IGNORED-STEPS") or os.getenv("INPUT_IGNORED_STEPS"))
             else []
         )
     )
     artifact_patterns: list[str] = field(
         default_factory=lambda: (
-            os.getenv("INPUT_ARTIFACT-PATTERNS", os.getenv("INPUT_ARTIFACT_PATTERNS", "")).split(",")
-            if os.getenv("INPUT_ARTIFACT-PATTERNS") or os.getenv("INPUT_ARTIFACT_PATTERNS")
+            (os.getenv("INPUT_ARTIFACT-PATTERNS") or os.getenv("INPUT_ARTIFACT_PATTERNS") or "").split(",")
+            if (os.getenv("INPUT_ARTIFACT-PATTERNS") or os.getenv("INPUT_ARTIFACT_PATTERNS"))
             else []
         )
     )
