@@ -37,8 +37,10 @@ def post_pr_comment(
         repo = g.get_repo(repository)
         pr = repo.get_pull(pr_number)
 
+        run_link = report._get_run_url()
         comment_body = f"""## 🤖 Workflow Failure Analysis
 
+**Workflow:** {report.workflow_name} {run_link}
 **Category:** {report.category.title()}
 
 {report.summary}
@@ -74,7 +76,7 @@ def post_pr_comment(
         repo_url = "https://github.com/calebevans/gha-failure-analysis"
         comment_body += f"""
 ---
-*Analysis powered by [gha-failure-analysis]({repo_url}) | Run: `{report.run_id}`*
+*Analysis powered by [gha-failure-analysis]({repo_url}) | Run: {run_link}*
 """
 
         # Final safety check: sanitize comment body
