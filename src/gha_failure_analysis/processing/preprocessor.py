@@ -6,7 +6,7 @@ from typing import Any
 from cordon import AnalysisConfig, SemanticLogAnalyzer
 from cordon.embedding import create_vectorizer
 
-from ..constants import CHARS_PER_TOKEN
+from ..constants import CHARS_PER_TOKEN, estimate_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +152,7 @@ class LogPreprocessor:
                 return len(tokens)
             except Exception:
                 pass
-        return len(text) // CHARS_PER_TOKEN
+        return estimate_tokens(text)
 
     def preprocess_file(self, log_path: str, step_name: str = "unknown", max_tokens: int | None = None) -> str:
         """Preprocess a log file, applying cordon if it exceeds size threshold.

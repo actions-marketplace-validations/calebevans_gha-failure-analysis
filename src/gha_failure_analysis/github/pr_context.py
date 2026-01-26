@@ -7,14 +7,10 @@ from github import Github
 from github.PullRequest import PullRequest
 from github.Repository import Repository
 
+from ..constants import estimate_tokens
 from .models import FileChange, PRContext
 
 logger = logging.getLogger(__name__)
-
-
-def _estimate_tokens(text: str) -> int:
-    """Rough token estimation (chars / 4)."""
-    return len(text) // 4
 
 
 def _is_binary_file(filename: str) -> bool:
@@ -153,7 +149,7 @@ def _fetch_changed_files_for_commit(
             # Check if we should include the patch/diff
             patch = None
             if file.patch and not _is_binary_file(filename):
-                patch_tokens = _estimate_tokens(file.patch)
+                patch_tokens = estimate_tokens(file.patch)
 
                 # Include patch if within budget
                 if max_tokens is None or (total_tokens_used + patch_tokens) <= max_tokens:
@@ -222,7 +218,7 @@ def _fetch_changed_files(pr: PullRequest, max_tokens: int | None) -> list[FileCh
             # Check if we should include the patch/diff
             patch = None
             if file.patch and not _is_binary_file(filename):
-                patch_tokens = _estimate_tokens(file.patch)
+                patch_tokens = estimate_tokens(file.patch)
 
                 # Include patch if within budget
                 if max_tokens is None or (total_tokens_used + patch_tokens) <= max_tokens:

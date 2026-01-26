@@ -27,11 +27,6 @@ MAX_RETRIES = 3
 RETRY_BASE_DELAY = 2.0  # seconds
 
 
-def _estimate_tokens(text: str) -> int:
-    """Rough token estimation (chars / 4)."""
-    return len(text) // 4
-
-
 def _sanitize_json_string(text: str) -> str:
     """Sanitize JSON string by escaping unescaped control characters."""
     import re

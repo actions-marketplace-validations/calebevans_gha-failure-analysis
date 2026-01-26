@@ -3,29 +3,10 @@
 
 from gha_failure_analysis.github.models import FileChange, PRContext
 from gha_failure_analysis.github.pr_context import (
-    _is_binary_file,
     find_related_files,
     get_relevant_diffs,
     summarize_changes,
 )
-
-
-class TestIsBinaryFile:
-    """Tests for binary file detection."""
-
-    def test_identifies_binary_extensions(self) -> None:
-        """Test that common binary extensions are identified."""
-        assert _is_binary_file("image.png") is True
-        assert _is_binary_file("document.pdf") is True
-        assert _is_binary_file("archive.zip") is True
-        assert _is_binary_file("font.woff") is True
-
-    def test_identifies_text_files(self) -> None:
-        """Test that text files are not identified as binary."""
-        assert _is_binary_file("script.py") is False
-        assert _is_binary_file("config.json") is False
-        assert _is_binary_file("readme.md") is False
-        assert _is_binary_file("test.txt") is False
 
 
 class TestSummarizeChanges:

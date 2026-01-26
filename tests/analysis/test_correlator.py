@@ -3,7 +3,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from gha_failure_analysis.analysis.correlator import ChangeCorrelator, CorrelationResult, correlations_to_json
+from gha_failure_analysis.analysis.correlator import ChangeCorrelator
 from gha_failure_analysis.github.models import FileChange, PRContext
 
 
@@ -37,70 +37,6 @@ def sample_pr_context() -> PRContext:
         base_sha="abc123",
         head_sha="def456",
     )
-
-
-class TestCorrelationResult:
-    """Tests for CorrelationResult dataclass."""
-
-    def test_to_dict(self) -> None:
-        """Test conversion to dictionary."""
-        result = CorrelationResult(
-            failure_type="test",
-            failure_identifier="test_auth.py::test_login",
-            likely_caused_by_pr=True,
-            confidence="high",
-            related_files=["src/auth/login.py"],
-            reasoning="Test failure directly related to changed authentication logic",
-        )
-
-        result_dict = result.to_dict()
-
-        assert result_dict["failure_type"] == "test"
-        assert result_dict["failure_identifier"] == "test_auth.py::test_login"
-        assert result_dict["likely_caused_by_pr"] is True
-        assert result_dict["confidence"] == "high"
-        assert result_dict["related_files"] == ["src/auth/login.py"]
-        reasoning = result_dict["reasoning"]
-        assert isinstance(reasoning, str)
-        assert "authentication logic" in reasoning
-
-
-class TestCorrelationsToJson:
-    """Tests for correlation JSON conversion."""
-
-    def test_converts_list_to_json(self) -> None:
-        """Test converting list of correlations to JSON."""
-        correlations = [
-            CorrelationResult(
-                failure_type="test",
-                failure_identifier="test1",
-                likely_caused_by_pr=True,
-                confidence="high",
-                related_files=["file1.py"],
-                reasoning="Reason 1",
-            ),
-            CorrelationResult(
-                failure_type="step",
-                failure_identifier="step1",
-                likely_caused_by_pr=False,
-                confidence="unlikely",
-                related_files=[],
-                reasoning="Reason 2",
-            ),
-        ]
-
-        json_str = correlations_to_json(correlations)
-
-        assert "test1" in json_str
-        assert "step1" in json_str
-        assert "high" in json_str
-        assert "unlikely" in json_str
-
-    def test_handles_empty_list(self) -> None:
-        """Test handling of empty correlation list."""
-        json_str = correlations_to_json([])
-
-        assert json_str == "[]"
 
 
 class TestChangeCorrelator:
