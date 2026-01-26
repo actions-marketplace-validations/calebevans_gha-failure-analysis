@@ -1,87 +1,30 @@
-# gha-failure-analysis
+<div align="center">
 
-AI-powered analysis of GitHub Actions workflow failures using semantic log preprocessing with [cordon](https://github.com/calebevans/cordon).
+# GitHub Actions Failure Analysis
 
-## What It Does
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Failure%20Analysis-blue.svg?colorA=24292e&colorB=0366d6&style=flat&logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/github-actions-failure-analysis)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/calebevans/gha-failure-analysis?logo=github)](https://github.com/calebevans/gha-failure-analysis/releases)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=calebevans_gha-failure-analysis&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=calebevans_gha-failure-analysis)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=calebevans_gha-failure-analysis&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=calebevans_gha-failure-analysis)
 
-When your GitHub Actions workflow fails, this action:
+</div>
 
-1. **Fetches** workflow run metadata, failed jobs, and logs
-2. **Preprocesses** logs using cordon to extract semantically relevant failure information
-3. **Analyzes** failures (steps and tests) using LLMs to identify root causes
-4. **Synthesizes** findings into a concise root cause analysis report
-5. **Outputs** results as job summaries, PR comments (optional), and JSON artifacts
+When your GitHub Actions workflow fails, this action automatically analyzes logs, correlates failures with code changes, and generates actionable root cause analysis reports.
 
 ## Features
 
-- **Semantic Log Processing**: Uses cordon's transformer-based anomaly detection to reduce logs to their most relevant sections
-- **LLM-Powered Analysis**: Leverages DSPy and your choice of LLM (OpenAI, Anthropic, Google Gemini, Ollama, etc.)
-- **PR Context-Aware Analysis**: Intelligently correlates code changes with failures to determine if PR changes caused the failure
-- **Flexible Triggering**: Can run in the same workflow or via `workflow_run` events
+- **Semantic Log Processing**: Uses [cordon](https://github.com/calebevans/cordon)'s transformer-based anomaly detection to extract relevant failure information from massive logs
+- **LLM-Powered Analysis**: Leverages DSPy and your choice of LLM (OpenAI, Anthropic, Gemini, Ollama) for intelligent failure analysis
+- **PR Context-Aware**: Automatically correlates code changes with failures to determine if PR changes caused the issue
+- **Flexible Triggering**: Run in the same workflow or via `workflow_run` events
 - **Secret Detection**: Automatically redacts secrets from all outputs
-- **Dynamic Token Budgeting**: Optimizes LLM context usage based on failure count
-- **Professional Reports**: Generates structured, actionable root cause analyses
+- **Professional Reports**: Generates structured, actionable root cause analyses with evidence and recommendations
 
-## PR Context Analysis
+## Quick Start
 
-When analyzing PR-triggered workflow failures, the tool automatically:
+### Same Workflow (Recommended)
 
-1. **Fetches PR changes**: Retrieves all files changed in the PR with their diffs
-2. **Correlates with failures**: Uses LLM-powered analysis to determine if code changes likely caused each failure
-3. **Assesses impact**: Provides a clear assessment of whether the PR changes are responsible for the failures
-4. **Identifies related changes**: Points to specific files and lines that may have caused the issues
-
-This helps you quickly understand if failures are due to your changes or unrelated infrastructure issues.
-
-### How It Works
-
-For each failure (step or test), the analyzer:
-- **Analyzes the exact commit that was tested**: Uses the workflow run's commit SHA, not the PR's current state
-- Identifies files changed in the PR that match the failure location
-- Passes relevant code diffs to the LLM along with failure details
-- Determines correlation likelihood: high, medium, low, or unlikely
-- Synthesizes findings into an overall PR impact assessment
-
-**Important**: The tool analyzes the **specific commit that triggered the workflow**, not the current state of the PR. This means even if the PR has been updated or merged with fixes, it will analyze the code as it was when the failure occurred.
-
-### Example Output
-
-When PR changes cause failures, you'll see:
-
-```markdown
-## PR Impact Assessment
-
-**Likelihood PR Changes Caused Failure:** High
-
-The test failures are directly related to code changes in this PR:
-- Changes to `src/auth/login.py` introduced a validation error
-- Modified authentication logic conflicts with test expectations in `tests/test_auth.py`
-
-### Related Changes
-- `src/auth/login.py:45-52` - Modified password validation logic
-- `src/config/settings.py:12` - Changed default timeout value
-```
-
-### Configuration
-
-PR context analysis is **enabled by default** for PR-triggered runs. To disable or configure:
-
-```yaml
-- uses: calebevans/gha-failure-analysis@v1
-  with:
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    llm-provider: openai
-    llm-model: gpt-4o
-    llm-api-key: ${{ secrets.OPENAI_API_KEY }}
-    analyze-pr-context: true  # Default: true
-    pr-context-token-budget: 20  # % of context for PR diffs (default: 20%)
-```
-
-## Usage
-
-### Same Workflow (After Failure)
-
-Add as a final step that runs on failure:
+Add as a final job that runs on failure:
 
 ```yaml
 jobs:
@@ -95,17 +38,19 @@ jobs:
     needs: test
     if: failure()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: calebevans/gha-failure-analysis@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           llm-provider: openai
           llm-model: gpt-4o
           llm-api-key: ${{ secrets.OPENAI_API_KEY }}
           post-pr-comment: true
 ```
 
-### Separate Workflow (workflow_run Event)
+### Separate Workflow
 
 Create a separate workflow that triggers on completion:
 
@@ -121,15 +66,79 @@ jobs:
   analyze:
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: calebevans/gha-failure-analysis@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
           llm-provider: anthropic
           llm-model: claude-3-5-sonnet-20241022
           llm-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
+
+> **Note:** The `github-token` parameter is optional and defaults to `${{ github.token }}`. Only specify it if you need to use a custom token with different permissions.
+
+## How It Works
+
+When a workflow fails, the action:
+
+1. **Fetches** workflow run metadata, failed jobs, and logs
+2. **Preprocesses** logs using cordon to extract semantically relevant sections
+3. **Analyzes** failures (steps and tests) using LLMs to identify root causes
+4. **Correlates** PR changes with failures to assess impact
+5. **Synthesizes** findings into a concise root cause analysis report
+6. **Outputs** results as job summaries, PR comments, and JSON artifacts
+
+## PR Context Analysis
+
+### What It Does
+
+When analyzing PR-triggered workflow failures, the action automatically:
+
+- **Fetches PR changes**: Retrieves all files changed with their diffs
+- **Correlates with failures**: Uses LLM analysis to determine if code changes likely caused each failure
+- **Assesses impact**: Provides clear assessment of whether PR changes are responsible
+- **Identifies culprits**: Points to specific files and lines that may have caused issues
+
+This helps you quickly understand if failures are due to your changes or unrelated infrastructure issues.
+
+### Example Output
+
+When PR changes cause failures, you'll see:
+
+```markdown
+## 🔍 PR Impact Assessment
+
+🔴 **Impact Likelihood:** High
+
+The test failures are directly related to code changes in this PR:
+- Changes to `src/auth/login.py` introduced a validation error
+- Modified authentication logic conflicts with test expectations in `tests/test_auth.py`
+
+### 💡 Relevant Code Changes
+
+**src/auth/login.py** (+12 -3)
+- Modified password validation logic at lines 45-52
+- Added new timeout parameter affecting authentication flow
+```
+
+### Configuration
+
+PR context analysis is **enabled by default** for PR-triggered runs. To customize:
+
+```yaml
+- uses: calebevans/gha-failure-analysis@v1
+  with:
+    llm-provider: openai
+    llm-model: gpt-4o
+    llm-api-key: ${{ secrets.OPENAI_API_KEY }}
+    analyze-pr-context: true  # Default: true
+    pr-context-token-budget: 20  # % of context for PR diffs (default: 20%)
+```
+
+**Important:** The action analyzes the **specific commit that triggered the workflow**, not the current PR state. This ensures accurate analysis even if the PR has been updated since the failure.
 
 ## Configuration
 
@@ -137,7 +146,6 @@ jobs:
 
 | Input | Description | Example |
 |-------|-------------|---------|
-| `github-token` | GitHub token for API access | `${{ secrets.GITHUB_TOKEN }}` |
 | `llm-provider` | LLM provider | `openai`, `anthropic`, `gemini`, `ollama` |
 | `llm-model` | Model name | `gpt-4o`, `claude-3-5-sonnet-20241022` |
 | `llm-api-key` | LLM API key | `${{ secrets.OPENAI_API_KEY }}` |
@@ -146,20 +154,26 @@ jobs:
 
 | Input | Default | Description |
 |-------|---------|-------------|
+| `github-token` | `${{ github.token }}` | GitHub token for API access |
 | `run-id` | Current run | Workflow run ID to analyze |
 | `pr-number` | Auto-detect | Manual PR number override (for testing) |
 | `llm-base-url` | Provider default | Custom LLM API base URL |
-| `cordon-device` | `cpu` | Device for cordon (`cpu`/`cuda`/`mps`) |
-| `cordon-backend` | `sentence-transformers` | Embedding backend (`remote` or `sentence-transformers`) |
-| `cordon-model-name` | `all-MiniLM-L6-v2` | Embedding model (HuggingFace or provider/model for remote) |
-| `cordon-api-key` | None | API key for remote embeddings (required if backend is `remote`) |
-| `cordon-batch-size` | `32` | Batch size for embeddings |
 | `post-pr-comment` | `false` | Post analysis as PR comment |
 | `analyze-pr-context` | `true` | Analyze failures in context of PR changes |
 | `pr-context-token-budget` | `20` | % of context to allocate for PR diffs (0-50) |
 | `ignored-jobs` | None | Comma-separated job name patterns to ignore |
 | `ignored-steps` | None | Comma-separated step name patterns to ignore |
 | `artifact-patterns` | None | Comma-separated glob patterns for artifacts |
+
+### Cordon Options (Log Preprocessing)
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `cordon-backend` | `sentence-transformers` | Embedding backend (`remote` or `sentence-transformers`) |
+| `cordon-model-name` | `all-MiniLM-L6-v2` | Embedding model name |
+| `cordon-api-key` | None | API key for remote embeddings |
+| `cordon-device` | `cpu` | Device for local embeddings (`cpu`/`cuda`/`mps`) |
+| `cordon-batch-size` | `32` | Batch size for embeddings |
 
 ### Outputs
 
@@ -174,6 +188,7 @@ jobs:
 The action supports any LLM provider compatible with DSPy/LiteLLM:
 
 ### OpenAI
+
 ```yaml
 llm-provider: openai
 llm-model: gpt-4o
@@ -181,6 +196,7 @@ llm-api-key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 ### Anthropic
+
 ```yaml
 llm-provider: anthropic
 llm-model: claude-3-5-sonnet-20241022
@@ -188,6 +204,7 @@ llm-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 ### Google Gemini
+
 ```yaml
 llm-provider: gemini
 llm-model: gemini-2.5-flash
@@ -195,6 +212,7 @@ llm-api-key: ${{ secrets.GEMINI_API_KEY }}
 ```
 
 ### Ollama (Local)
+
 ```yaml
 llm-provider: ollama
 llm-model: llama3.1:70b
@@ -202,6 +220,7 @@ llm-model: llama3.1:70b
 ```
 
 ### Custom Endpoint
+
 ```yaml
 llm-provider: openai
 llm-model: custom-model
@@ -211,11 +230,11 @@ llm-base-url: https://custom-llm-gateway.example.com
 
 ## Cordon Configuration
 
-Cordon preprocesses logs to extract anomalous sections. You can configure it to use either remote or local embeddings.
+Cordon preprocesses logs to extract semantically relevant sections. Configure it to use remote or local embeddings.
 
 ### Remote Embeddings (Recommended)
 
-**Fast and no model downloads required.** Use your existing LLM provider's embedding API:
+**Fast and no model downloads required.** Uses your LLM provider's embedding API:
 
 ```yaml
 cordon-backend: remote
@@ -230,6 +249,7 @@ cordon-api-key: ${{ secrets.OPENAI_API_KEY }}
 - Voyage: `voyage/voyage-2`, `voyage/voyage-code-2`
 
 **Example with Gemini:**
+
 ```yaml
 cordon-backend: remote
 cordon-model-name: gemini/gemini-embedding-001
@@ -238,35 +258,42 @@ cordon-api-key: ${{ secrets.GEMINI_API_KEY }}
 
 ### Local Embeddings
 
-If you prefer to run embeddings locally (slower, requires model download):
+For local embedding generation (slower, requires model download):
 
 ```yaml
 cordon-backend: sentence-transformers
 cordon-model-name: all-MiniLM-L6-v2
-cordon-device: cpu  # or cuda/mps if GPU available
+cordon-device: cpu  # or cuda/mps for GPU
 ```
 
-**GPU Acceleration:**
-If your runner has a GPU, use it for faster preprocessing:
+**GPU Acceleration:** If your runner has a GPU, use it for 5-15x faster preprocessing:
+
 ```yaml
-cordon-device: cuda  # or mps for Apple Silicon
+cordon-device: cuda  # NVIDIA GPUs
+cordon-device: mps   # Apple Silicon
 ```
 
 ## Example Output
 
-The action generates a structured analysis like:
+The action generates structured analyses like:
 
 ````markdown
-# Workflow Failure Analysis
-**Workflow:** `CI`
-**Run ID:** `1234567890` | **PR:** #123 | **Category:** Test
+# 🔍 Workflow Failure Analysis
+
+| | |
+|---|---|
+| **Workflow** | `CI` |
+| **Run ID** | [#21234567890](https://github.com/owner/repo/actions/runs/21234567890) |
+| **Pull Request** | [#123](https://github.com/owner/repo/pull/123) |
+| **Category** | 🧪 Test |
 
 ---
-## Root Cause
+
+## 🎯 Root Cause
 
 Test suite failed due to timeout waiting for database connection in integration tests.
 
-## Technical Details
+## 🔬 Technical Details
 
 ### Immediate Cause
 Integration test `test_user_authentication` timed out after 30 seconds while attempting
@@ -275,19 +302,35 @@ to establish a database connection.
 ### Contributing Factors
 Database initialization script took longer than expected, causing connection pool exhaustion.
 
-### Impact
-Blocked all subsequent integration tests from executing, resulting in incomplete test coverage.
+## 🔍 PR Impact Assessment
 
-## Evidence
+🔴 **Impact Likelihood:** High
 
-**test / Run integration tests** — *test*
+The changes to `db/init.sql` increased startup time, directly causing the timeout.
+
+### 💡 Relevant Code Changes
+
+**db/init.sql** (+45 -12)
+```diff
++ -- Added complex indexes that slow initialization
++ CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
+```
+
+## 📊 Evidence
+
+### ❌ test / Run integration tests
+
+**Category:** test
+
+**Root Cause:** Connection timeout after 30 seconds
 
 <details>
-<summary><code>test/integration_test.log line 456</code></summary>
+<summary>📋 <b>View Detailed Evidence</b></summary>
 
 ```
 ERROR: Timeout waiting for database connection
 Connection pool exhausted: 0/10 connections available
+Database startup took 45.2s (expected: <10s)
 ```
 </details>
 ````
@@ -300,9 +343,3 @@ The action automatically detects and redacts secrets from all outputs using [det
 - PR comments
 - JSON reports
 - Console logs
-
-## Performance
-
-- **GPU Acceleration**: Both embedding and scoring use GPU when available (5-15x faster)
-- **Dynamic Budgeting**: Automatically adjusts token allocation based on failure count
-- **Efficient Batching**: Processes multiple failures optimally
