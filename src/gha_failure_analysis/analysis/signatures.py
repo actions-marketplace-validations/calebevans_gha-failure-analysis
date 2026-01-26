@@ -241,3 +241,27 @@ class ExtractRelevantDiffSection(dspy.Signature):  # type: ignore[misc]
             "If nothing relevant, return 'No directly relevant changes found.'"
         )
     )
+
+
+class SelectUsefulEvidence(dspy.Signature):  # type: ignore[misc]
+    """Select the most useful, non-redundant evidence items from a list.
+
+    Given multiple evidence items for a failure, select the 2-3 most informative examples that:
+    - Are semantically distinct from each other (avoid showing the same error multiple times)
+    - Best support the identified root cause
+    - Provide different types of information (e.g., error message + stack trace, not 3x same error)
+    - Are most actionable for debugging
+
+    Prioritize diversity and usefulness over quantity.
+    """
+
+    root_cause: str = dspy.InputField(desc="The identified root cause of the failure")
+    all_evidence: str = dspy.InputField(desc="JSON array of all available evidence items with source and content")
+
+    selected_indices: str = dspy.OutputField(
+        desc=(
+            "Comma-separated list of indices (0-based) for the most useful evidence items. "
+            "Select 2-3 diverse items that best support the root cause. "
+            "Example: '0,3,7' or '1,4'. Return empty string if no evidence is useful."
+        )
+    )

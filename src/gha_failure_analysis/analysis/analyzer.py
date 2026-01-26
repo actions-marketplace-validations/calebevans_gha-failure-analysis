@@ -123,6 +123,55 @@ class RCAReport:
 
         return groups
 
+    def _select_useful_evidence(self, evidence: list[dict[str, str]], root_cause: str) -> list[dict[str, str]]:
+        """Use LLM to select the most useful, non-redundant evidence items.
+
+        Args:
+            evidence: List of evidence items with 'source' and 'content'
+            root_cause: The identified root cause
+
+        Returns:
+            Filtered list of diverse, useful evidence items
+        """
+        if not evidence:
+            return []
+
+        # If 2 or fewer items, just return them all
+        if len(evidence) <= 2:
+            return evidence
+
+        try:
+            import json
+
+            from .signatures import SelectUsefulEvidence
+
+            # Prepare evidence as JSON
+            evidence_json = json.dumps(evidence, indent=2)
+
+            # Use LLM to select most useful evidence
+            selector = dspy.Predict(SelectUsefulEvidence)
+            result = selector(root_cause=root_cause, all_evidence=evidence_json)
+
+            # Parse selected indices
+            if result.selected_indices and result.selected_indices.strip():
+                indices_str = result.selected_indices.strip()
+                indices = [int(idx.strip()) for idx in indices_str.split(",") if idx.strip().isdigit()]
+
+                # Validate indices and select items
+                selected = []
+                for idx in indices:
+                    if 0 <= idx < len(evidence):
+                        selected.append(evidence[idx])
+
+                if selected:
+                    return selected[:3]  # Cap at 3 max
+
+        except Exception as e:
+            logger.warning(f"Failed to use LLM for evidence selection: {e}, falling back to first 2 items")
+
+        # Fallback: just take first 2 items
+        return evidence[:2]
+
     def _format_pr_impact_section(self) -> str:
         """Format the PR Impact Assessment section."""
         if not self.pr_impact_assessment or not self.pr_impact_assessment.strip():
@@ -236,18 +285,21 @@ class RCAReport:
 
                 # Show evidence from the first occurrence
                 if representative.evidence:
-                    parts.append("<details>\n<summary>📋 <b>View Detailed Evidence</b></summary>\n\n")
-                    for item in representative.evidence[:3]:  # Limit to top 3 evidence items
-                        source = item.get("source", "unknown")
-                        content = item.get("content", "").replace("`", "'").strip()
+                    # Use LLM to select most useful, non-redundant evidence
+                    useful_evidence = self._select_useful_evidence(representative.evidence, representative.root_cause)
+                    if useful_evidence:
+                        parts.append("<details>\n<summary>📋 <b>View Detailed Evidence</b></summary>\n\n")
+                        for item in useful_evidence:
+                            source = item.get("source", "unknown")
+                            content = item.get("content", "").replace("`", "'").strip()
 
-                        # Truncate very long content
-                        if len(content) > 500:
-                            content = content[:500] + "\n... (truncated)"
+                            # Truncate very long content
+                            if len(content) > 500:
+                                content = content[:500] + "\n... (truncated)"
 
-                        parts.append(f"**Source:** `{source}`\n\n")
-                        parts.append(f"```\n{content}\n```\n\n")
-                    parts.append("</details>\n\n")
+                            parts.append(f"**Source:** `{source}`\n\n")
+                            parts.append(f"```\n{content}\n```\n\n")
+                        parts.append("</details>\n\n")
             else:
                 # Single failure - show normally
                 analysis = analyses[0]
@@ -256,18 +308,21 @@ class RCAReport:
                 parts.append(f"**Root Cause:** {analysis.root_cause}\n\n")
 
                 if analysis.evidence:
-                    parts.append("<details>\n<summary>📋 <b>View Detailed Evidence</b></summary>\n\n")
-                    for item in analysis.evidence[:3]:  # Limit to top 3 evidence items
-                        source = item.get("source", "unknown")
-                        content = item.get("content", "").replace("`", "'").strip()
+                    # Use LLM to select most useful, non-redundant evidence
+                    useful_evidence = self._select_useful_evidence(analysis.evidence, analysis.root_cause)
+                    if useful_evidence:
+                        parts.append("<details>\n<summary>📋 <b>View Detailed Evidence</b></summary>\n\n")
+                        for item in useful_evidence:
+                            source = item.get("source", "unknown")
+                            content = item.get("content", "").replace("`", "'").strip()
 
-                        # Truncate very long content
-                        if len(content) > 500:
-                            content = content[:500] + "\n... (truncated)"
+                            # Truncate very long content
+                            if len(content) > 500:
+                                content = content[:500] + "\n... (truncated)"
 
-                        parts.append(f"**Source:** `{source}`\n\n")
-                        parts.append(f"```\n{content}\n```\n\n")
-                    parts.append("</details>\n\n")
+                            parts.append(f"**Source:** `{source}`\n\n")
+                            parts.append(f"```\n{content}\n```\n\n")
+                        parts.append("</details>\n\n")
 
         return "".join(parts)
 
