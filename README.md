@@ -352,7 +352,7 @@ The action automatically detects and redacts secrets from all outputs using [det
 
 ## Troubleshooting
 
-# GitHub Runner OS User Permission
+### GitHub Runner OS User Permission
 
 In some repos this workflow might fail with the following error message:
 ```
